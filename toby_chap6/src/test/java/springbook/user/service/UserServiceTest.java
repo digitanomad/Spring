@@ -1,6 +1,5 @@
 package springbook.user.service;
 
-import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -9,6 +8,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.mail.MailException;
 import org.springframework.mail.MailSender;
 import org.springframework.mail.SimpleMailMessage;
@@ -30,6 +30,12 @@ public class UserServiceTest {
 
 	@Autowired
 	UserService userService;
+	
+	// 같은 타입의 빈이 두 개 존재하기 때문에 필드 이름을 기준으로 주입될 빈이 결정된다.
+	// 자동 프록시 생성기에 의해 트랜잭션 부가기능이 testUserService 빈에 적용됐는지를
+	// 확인하는 것이 목적이다.
+	@Autowired
+	UserService testUserService;
 
 	@Autowired
 	UserDao userDao;
@@ -40,8 +46,10 @@ public class UserServiceTest {
 	@Autowired
 	MailSender mailSender;
 
+/*	@Autowired
+	UserServiceImpl userServiceImpl;*/
 	@Autowired
-	UserServiceImpl userServiceImpl;
+	ApplicationContext context;
 
 	// 테스트 픽스
 	List<User> users;
@@ -55,7 +63,7 @@ public class UserServiceTest {
 				new User("green", "오민규", "p5", Level.GOLD, 100, Integer.MAX_VALUE, "green@gmail.com"));
 	}
 
-	@Test
+/*	@Test
 	@DirtiesContext
 	public void upgradeLevels() {
 		userDao.deleteAll();
@@ -79,7 +87,7 @@ public class UserServiceTest {
 		assertThat(request.size(), is(2));
 		assertThat(request.get(0), is(users.get(1).getEmail()));
 		assertThat(request.get(1), is(users.get(3).getEmail()));
-	}
+	}*/
 	
 	@Test
 	public void isolateUpgradeLevels() {
@@ -124,21 +132,25 @@ public class UserServiceTest {
 
 	@Test
 	public void upgradeAllOrNothing() throws Exception {
-		TestUserService testUserService = new TestUserService(users.get(3)
-				.getId());
-		testUserService.setUserDao(this.userDao);
-		testUserService.setMailSender(mailSender);
+//		TestUserService testUserService = new TestUserService(users.get(3).getId());
+//		testUserService.setUserDao(userDao);
+//		testUserService.setMailSender(mailSender);
 		
-		TransactionHandler txHanlder = new TransactionHandler();
-		txHanlder.setTarget(testUserService);
-		txHanlder.setTransactionManager(transactionManager);
-		txHanlder.setPattern("upgradeLevels");
+		// 팩토리 빈 자체를 가져와야 하므로 빈 이름이 &를 반드시 넣어야 한다.
+//		ProxyFactoryBean txProxyFactoryBean = context.getBean("&userService", ProxyFactoryBean.class);
+//		txProxyFactoryBean.setTarget(testUserService);
+//		UserService txUserService = (UserService) txProxyFactoryBean.getObject();
+		
+//		TransactionHandler txHanlder = new TransactionHandler();
+//		txHanlder.setTarget(testUserService);
+//		txHanlder.setTransactionManager(transactionManager);
+//		txHanlder.setPattern("upgradeLevels");
 
 //		UserServiceTx txUserService = new UserServiceTx();
 //		txUserService.setTransactionManager(transactionManager);
 //		txUserService.setUserService(testUserService);
 		
-		UserService txUserService = (UserService) Proxy.newProxyInstance(getClass().getClassLoader(), new Class[] {UserService.class}, txHanlder);
+//		UserService txUserService = (UserService) Proxy.newProxyInstance(getClass().getClassLoader(), new Class[] {UserService.class}, txHanlder);
 
 		userDao.deleteAll();
 
@@ -147,7 +159,7 @@ public class UserServiceTest {
 		}
 
 		try {
-			txUserService.upgradeLevels();
+			this.testUserService.upgradeLevels();
 			fail("TestUserServiceException expected");
 		} catch (TestUserServiceException e) {
 		}
@@ -164,13 +176,9 @@ public class UserServiceTest {
 			assertThat(userUpdate.getLevel(), is(user.getLevel()));
 		}
 	}
-
-	static class TestUserService extends UserServiceImpl {
-		private String id;
-
-		private TestUserService(String id) {
-			this.id = id;
-		}
+	
+	static class TestUserServiceImpl extends UserServiceImpl {
+		private String id = "madnite1";
 
 		protected void upgradeLevel(User user) {
 			if (user.getId().equals(this.id)) {
