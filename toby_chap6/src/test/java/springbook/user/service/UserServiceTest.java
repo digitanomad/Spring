@@ -1,5 +1,9 @@
 package springbook.user.service;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -9,23 +13,28 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.dao.TransientDataAccessResourceException;
 import org.springframework.mail.MailException;
 import org.springframework.mail.MailSender;
 import org.springframework.mail.SimpleMailMessage;
-import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import springbook.user.dao.UserDao;
 import springbook.user.domain.Level;
 import springbook.user.domain.User;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = "/applicationContext.xml")
+// 롤백 여부에 대한 기본 설정과 트랜잭션 매니저 빈을 지정하는 데 사용할 수 있다.
+// 디폴트 트랜잭션 매니저 아이디는 관례를 따라서 transactionManager로 되어있다.
+//@TransactionConfiguration(defaultRollback=false)
+
 public class UserServiceTest {
 
 	@Autowired
@@ -166,6 +175,46 @@ public class UserServiceTest {
 
 		checkLevelUpgraded(users.get(1), false);
 	}
+	
+	@Test(expected=TransientDataAccessResourceException.class)
+	public void readOnlyTransactionAttribute() {
+		testUserService.getAll();
+	}
+	
+	@Test
+	public void transactionSync() {
+		DefaultTransactionDefinition txDefinition = new DefaultTransactionDefinition();
+		// 트랜잭션 매니저에게 트랜잭션을 요청한다. 기존에 시작된 트랜잭션이 없으니 새로운 트랜잭션을 시작시키고
+		// 트랜잭션 정보를 돌려준다. 동시에 만들어진 트랜잭션을 다른 곳에서도 사용할 수 있도록 동기화한다.
+		TransactionStatus txStatus = transactionManager.getTransaction(txDefinition);
+		
+//		userService.deleteAll();
+//		
+//		userService.add(users.get(0));
+//		userService.add(users.get(1));
+//		
+//		
+//		transactionManager.commit(txStatus);
+//		assertThat(userDao.getCount(), is(2));
+		
+		// 롤백 테스트
+		try {
+			userService.deleteAll();
+			userService.add(users.get(0));
+			userService.add(users.get(1));
+		} finally {
+			transactionManager.rollback(txStatus);
+		}
+	}
+	
+	@Test
+	@Transactional
+	@Rollback(false)
+	public void transactionSyncTest() {
+		userService.deleteAll();
+		userService.add(users.get(0));
+		userService.add(users.get(1));
+	}
 
 	private void checkLevelUpgraded(User user, boolean upgraded) {
 		User userUpdate = userDao.get(user.getId());
@@ -186,6 +235,14 @@ public class UserServiceTest {
 			}
 
 			super.upgradeLevel(user);
+		}
+		
+		public List<User> getAll() {
+			for (User user : super.getAll()) {
+				super.update(user);
+			}
+			
+			return null;
 		}
 
 	}
