@@ -6,4 +6,8 @@
 	<bean id="unmarshaller" class="org.springframework.oxm.jaxb.Jaxb2Marshaller">
 		<property name="contextPath" value="springbook.user.sqlservice.jaxb" />
 	</bean>
+	
+	<!-- <bean id="unmarshaller" class="org.springframework.oxm.castor.CastorMarshaller">
+		<property name="mappingLocation" value="springbook/learningtest/spring/oxm/mapping.xml" />
+	</bean> -->
 </beans>
