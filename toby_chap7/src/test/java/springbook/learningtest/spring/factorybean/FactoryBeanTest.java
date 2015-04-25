@@ -10,7 +10,7 @@ import static org.junit.Assert.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration
+@ContextConfiguration(locations="classpath:/springbook/learningtest/spring/factorybean/FactoryBeanTest-context.xml")
 public class FactoryBeanTest {
 	@Autowired
 	ApplicationContext context;
