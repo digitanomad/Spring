@@ -22,12 +22,13 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 
+import springbook.user.dao.TestApplicationContext;
 import springbook.user.dao.UserDao;
 import springbook.user.domain.Level;
 import springbook.user.domain.User;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(locations = "/applicationContext.xml")
+@ContextConfiguration(classes=TestApplicationContext.class)
 // 롤백 여부에 대한 기본 설정과 트랜잭션 매니저 빈을 지정하는 데 사용할 수 있다.
 // 디폴트 트랜잭션 매니저 아이디는 관례를 따라서 transactionManager로 되어있다.
 //@TransactionConfiguration(defaultRollback=false)
@@ -145,7 +146,7 @@ public class UserServiceTest {
 		}
 	}
 	
-	static class TestUserServiceImpl extends UserServiceImpl {
+	public static class TestUserServiceImpl extends UserServiceImpl {
 		private String id = "madnite1";
 
 		protected void upgradeLevel(User user) {
