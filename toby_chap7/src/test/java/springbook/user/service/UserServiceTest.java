@@ -11,10 +11,12 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.dao.TransientDataAccessResourceException;
 import org.springframework.mail.MailSender;
 import org.springframework.test.annotation.Rollback;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -22,13 +24,14 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 
-import springbook.user.dao.TestApplicationContext;
+import springbook.user.AppContext;
 import springbook.user.dao.UserDao;
 import springbook.user.domain.Level;
 import springbook.user.domain.User;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(classes=TestApplicationContext.class)
+@ActiveProfiles("test")
+@ContextConfiguration(classes={AppContext.class})
 // 롤백 여부에 대한 기본 설정과 트랜잭션 매니저 빈을 지정하는 데 사용할 수 있다.
 // 디폴트 트랜잭션 매니저 아이디는 관례를 따라서 transactionManager로 되어있다.
 //@TransactionConfiguration(defaultRollback=false)
@@ -53,8 +56,6 @@ public class UserServiceTest {
 	@Autowired
 	MailSender mailSender;
 
-/*	@Autowired
-	UserServiceImpl userServiceImpl;*/
 	@Autowired
 	ApplicationContext context;
 
@@ -146,8 +147,36 @@ public class UserServiceTest {
 		}
 	}
 	
+	/*
+	 * 등록된 빈 내역을 조회하는 테스트 메소드
+	 */
+	
+	@Autowired
+	DefaultListableBeanFactory bf;
+	
+	@Test
+	public void beans() {
+		for (String n : bf.getBeanDefinitionNames()) {
+			System.out.println(n + "\t" + bf.getBean(n).getClass().getName());
+		}
+	}
+	
+	
+	/*
+	 * 테스트 클래스
+	 */
+	
 	public static class TestUserServiceImpl extends UserServiceImpl {
 		private String id = "madnite1";
+		
+		public void setUserDao(UserDao userDao) {
+			this.userDao = userDao;
+		}
+
+		public void setMailSender(MailSender mailSender) {
+			this.mailSender = mailSender;
+		}
+
 
 		protected void upgradeLevel(User user) {
 			if (user.getId().equals(this.id)) {
@@ -164,7 +193,6 @@ public class UserServiceTest {
 			
 			return null;
 		}
-
 	}
 
 	static class TestUserServiceException extends RuntimeException {
