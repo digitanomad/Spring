@@ -7,10 +7,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.SimpleDriverDataSource;
 import org.springframework.mail.MailSender;
@@ -28,9 +29,9 @@ import com.mysql.jdbc.Driver;
 @Configuration
 @EnableTransactionManagement
 @ComponentScan(basePackages="springbook.user")
-@Import({SqlServiceContext.class})
+@EnableSqlService
 @PropertySource("/springbook/user/database.properties")
-public class AppContext {
+public class AppContext implements SqlMapConfig {
 	
 	/*
 	 * DB 연결과 트랜잭션
@@ -112,4 +113,11 @@ public class AppContext {
 		}
 	}
 	
+	/*
+	 * SQL 서비스
+	 */
+	@Override
+	public Resource getSqlMapResource() {
+		return new ClassPathResource("sqlmap.xml", UserDao.class);
+	}
 }
